@@ -5,56 +5,107 @@ require("dotenv").config();
 
 const app = express();
 
+/* =========================
+   Middleware
+========================= */
 app.use(cors());
 app.use(express.json());
 
-app.post("/contact", async (req, res) => {
-  const { name, email, subject, message } = req.body;
-
-  try {
-    // Robust Gmail transporter for Cloud Hosting
-   const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
+/* =========================
+   Health Check
+========================= */
+app.get("/", (req, res) => {
+  res.send("Backend is running 🚀");
 });
 
+/* =========================
+   Contact Route
+========================= */
+app.post("/contact", async (req, res) => {
+  try {
+    const { name, email, subject, message } = req.body;
+
+    // Validation
+    if (!name || !email || !message) {
+      return res.status(400).json({
+        success: false,
+        message: "Please fill all required fields",
+      });
+    }
+
+    // Debug logs
+    console.log("EMAIL_USER:", process.env.EMAIL_USER);
+    console.log(
+      "EMAIL_PASS EXISTS:",
+      process.env.EMAIL_PASS ? "YES" : "NO"
+    );
+
+    // Gmail transporter
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    // Verify transporter
+    await transporter.verify();
+    console.log("SMTP Ready ✅");
+
     // Send email
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      replyTo: email,
+    const info = await transporter.sendMail({
+      from: `"Portfolio Contact" <${process.env.EMAIL_USER}>`,
       to: process.env.EMAIL_USER,
-      subject: subject || `New Portfolio Message From ${name}`,
+      replyTo: email,
+
+      subject: subject || `Portfolio Message From ${name}`,
+
       text: `
 Name: ${name}
 Email: ${email}
-Subject: ${subject}
+Subject: ${subject || "No Subject"}
 
 Message:
 ${message}
       `,
+
+      html: `
+        <h2>New Portfolio Message</h2>
+
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Subject:</strong> ${subject || "No Subject"}</p>
+
+        <hr />
+
+        <p>${message}</p>
+      `,
     });
 
-    res.status(200).json({
+    console.log("Email Sent ✅", info.messageId);
+
+    return res.status(200).json({
       success: true,
-      message: "Message sent successfully",
+      message: "Message sent successfully 🚀",
     });
 
   } catch (error) {
-    // Logs the specific error to your Render dashboard for debugging
-    console.error("Nodemailer Error:", error);
-    res.status(500).json({
+    console.error("FULL ERROR ❌");
+    console.error(error);
+
+    return res.status(500).json({
       success: false,
-      message: "Failed to send message",
+      message: error.message || "Internal Server Error",
     });
   }
 });
 
-// IMPORTANT: Render uses process.env.PORT automatically
+/* =========================
+   Start Server
+========================= */
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT} 🚀`);
 });
