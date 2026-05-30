@@ -12,15 +12,21 @@ app.post("/contact", async (req, res) => {
   const { name, email,subject, message } = req.body;
 
   try {
-    // Gmail transporter
+ // Gmail transporter (Updated for Cloud Hosting)
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false, // Use false for port 587
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
+      tls: {
+        rejectUnauthorized: false // This helps bypass some network blocks
+      }
     });
 
+    
     // Send email
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
