@@ -12,10 +12,10 @@ app.use(cors());
 app.use(express.json());
 
 /* =========================
-   Health Check
+   Health Check Route
 ========================= */
 app.get("/", (req, res) => {
-  res.send("Backend is running 🚀");
+  res.status(200).send("Backend is running 🚀");
 });
 
 /* =========================
@@ -25,7 +25,9 @@ app.post("/contact", async (req, res) => {
   try {
     const { name, email, subject, message } = req.body;
 
-    // Validation
+    /* =========================
+       Validation
+    ========================= */
     if (!name || !email || !message) {
       return res.status(400).json({
         success: false,
@@ -33,30 +35,48 @@ app.post("/contact", async (req, res) => {
       });
     }
 
-    // Debug logs
+    /* =========================
+       Environment Debug
+    ========================= */
     console.log("EMAIL_USER:", process.env.EMAIL_USER);
+
     console.log(
       "EMAIL_PASS EXISTS:",
       process.env.EMAIL_PASS ? "YES" : "NO"
     );
 
-    // Gmail transporter
+    /* =========================
+       Gmail SMTP Transporter
+       Optimized for Render
+    ========================= */
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
+
+      family: 4, // Force IPv4
     });
 
-    // Verify transporter
+    /* =========================
+       Verify SMTP
+    ========================= */
     await transporter.verify();
-    console.log("SMTP Ready ✅");
 
-    // Send email
+    console.log("SMTP Connection Successful ✅");
+
+    /* =========================
+       Send Mail
+    ========================= */
     const info = await transporter.sendMail({
       from: `"Portfolio Contact" <${process.env.EMAIL_USER}>`,
+
       to: process.env.EMAIL_USER,
+
       replyTo: email,
 
       subject: subject || `Portfolio Message From ${name}`,
@@ -71,7 +91,7 @@ ${message}
       `,
 
       html: `
-        <h2>New Portfolio Message</h2>
+        <h2>New Portfolio Contact Message</h2>
 
         <p><strong>Name:</strong> ${name}</p>
         <p><strong>Email:</strong> ${email}</p>
@@ -83,7 +103,8 @@ ${message}
       `,
     });
 
-    console.log("Email Sent ✅", info.messageId);
+    console.log("Email Sent Successfully ✅");
+    console.log("Message ID:", info.messageId);
 
     return res.status(200).json({
       success: true,
@@ -91,7 +112,7 @@ ${message}
     });
 
   } catch (error) {
-    console.error("FULL ERROR ❌");
+    console.error("FULL NODEMAILER ERROR ❌");
     console.error(error);
 
     return res.status(500).json({
